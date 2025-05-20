@@ -20,6 +20,13 @@
                     0 0 10px #00ffff;
             }
 
+            .client-name {
+                font-size: 2em;
+                margin-bottom: 10px;
+                color: #00ffff;
+                text-shadow: 0 0 5px #00ffff;
+            }
+
             .controller {
                 font-size: 1.5em;
                 margin-bottom: 10px;
@@ -97,6 +104,7 @@
         />
     </head>
     <body>
+        <div class="client-name" id="clientNameDisplay"></div>
         <div class="controller" id="controller">Waiting for controller...</div>
         <div class="value" id="timer">0.0</div>
         <div class="lap-time" id="lapTimeDisplay"></div>
@@ -118,6 +126,8 @@
                 document.getElementById("lapTimeDisplay");
             const lapHistoryElement = document.getElementById("lapHistory");
             const controllerElement = document.getElementById("controller");
+            const clientNameDisplayElement =
+                document.getElementById("clientNameDisplay"); // Addded client name
             const startButton = document.getElementById("start");
             const pauseButton = document.getElementById("pause");
             const resetButton = document.getElementById("reset");
@@ -144,6 +154,9 @@
                     const activeClient = msg.activeClient;
                     yourId = msg.yourId;
 
+                    // Update client name display
+                    clientNameDisplayElement.textContent = `You are: ${yourId}`;
+
                     // Update timer display with animation
                     if (typeof anime !== "undefined") {
                         anime({
@@ -167,7 +180,7 @@
 
                     // Update lap time display with client name
                     if (lapTime > 0 && lastLapClient) {
-                        lapTimeDisplayElement.textContent = `Lap (${lastLapClient}): ${(lapTime / 1000).toFixed(1)}`;
+                        lapTimeDisplayElement.textContent = ""; //`Lap (${lastLapClient}): ${(lapTime / 1000).toFixed(1)}`;
                     } else {
                         lapTimeDisplayElement.textContent = "";
                     }
@@ -176,8 +189,8 @@
                     let historyHTML = "<ul>";
                     if (lapHistory && lapHistory.length > 0) {
                         lapHistory.forEach((lap) => {
-                            // console.log("Lap object:", lap);
-                            historyHTML += `<li>Lap (${lap.client}): ${(lap.timeMs / 1000).toFixed(1)}</li>`;
+                            console.log("Lap object:", lap);
+                            historyHTML += `<li>${lap.client}: ${(lap.timeMs / 1000).toFixed(1)} s</li>`;
                         });
                     } else {
                         historyHTML += "<li>No laps yet</li>";

@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"sync"
@@ -27,6 +28,7 @@ var (
 	clientsMux  sync.Mutex
 
 	activeClientID string // ID of the client currently in control
+	turnsCompleted int    // Counter to track completed turns
 
 	upgrader = websocket.Upgrader{
 		CheckOrigin: func(r *http.Request) bool { return true },
@@ -44,8 +46,9 @@ var (
 )
 
 var (
-	names      = []string{"pippo", "pluto", "topolino"}
-	adjectives = []string{"schifoso", "rognoso", "noioso"}
+	clientIndex int // Track current client index
+	names       = []string{"sorcio", "mostro", "cane"}
+	adjectives  = []string{"schifoso", "rognoso", "mostruoso"}
 )
 
 func generateName() string {
@@ -172,8 +175,6 @@ func handleCommand(clientID string, cmd string) {
 	// Handle 'next' command separately as it modifies clientsMux protected state
 	if cmd == "next" {
 		stateMux.Lock() // Lock stateMux to read current time and reset
-
-		// Calculate the total elapsed time for the current lap
 		var currentLap time.Duration
 		if isRunning {
 			currentLap = elapsed + time.Since(startTime)
@@ -182,6 +183,10 @@ func handleCommand(clientID string, cmd string) {
 		}
 		lastLapTime = currentLap // Store the lap time duration
 		lastLapClient = clientID // Store the client ID who set the lap time
+
+		// Increment turns completed counter
+		turnsCompleted++
+		fmt.Printf("Turns completed: %d\n", turnsCompleted)
 
 		// Append the lap to the history
 		lapHistory = append(lapHistory, Lap{Client: clientID, Time: currentLap, TimeMs: currentLap.Milliseconds()})
@@ -196,28 +201,40 @@ func handleCommand(clientID string, cmd string) {
 
 		clientsMux.Lock() // Re-acquire clientsMux lock for 'next' command
 		if len(clientOrder) > 1 {
-			// Find the current active client's index
-			currentIndex := -1
-			for i, id := range clientOrder {
-				if id == activeClientID {
-					currentIndex = i
-					break
-				}
-			}
-
-			if currentIndex != -1 {
-				// Calculate next index (wraps around)
-				nextIndex := (currentIndex + 1) % len(clientOrder)
-				activeClientID = clientOrder[nextIndex]
-				log.Println("Control passed to next client:", activeClientID)
+			// Check if all clients have had a turn
+			if turnsCompleted >= len(clientOrder) {
+				// Stop the timer if all clients have had their turn.
+				isRunning = false
+				elapsed = 0
+				lastLapTime = 0
+				lastLapClient = ""
+				//lapHistory = []Lap{}  // Don't clear lapHistory here!
+				turnsCompleted = 0 // Reset the counter
+				log.Println("All clients have had their turn. Timer stopped.")
 			} else {
-				// Should not happen if activeClientID is always in clientOrder
-				log.Println("Active client ID not found in client order list.")
-				// Fallback: assign to first client if current not found (shouldn't be needed)
-				if len(clientOrder) > 0 {
-					activeClientID = clientOrder[0]
+				// Find the current active client's index
+				currentIndex := -1
+				for i, id := range clientOrder {
+					if id == activeClientID {
+						currentIndex = i
+						break
+					}
+				}
+
+				if currentIndex != -1 {
+					// Calculate next index (wraps around)
+					nextIndex := (currentIndex + 1) % len(clientOrder)
+					activeClientID = clientOrder[nextIndex]
+					log.Println("Control passed to next client:", activeClientID)
 				} else {
-					activeClientID = "" // No clients left
+					// Should not happen if activeClientID is always in clientOrder
+					log.Println("Active client ID not found in client order list.")
+					// Fallback: assign to first client if current not found (shouldn't be needed)
+					if len(clientOrder) > 0 {
+						activeClientID = clientOrder[0]
+					} else {
+						activeClientID = "" // No clients left
+					}
 				}
 			}
 		} else {
@@ -229,6 +246,7 @@ func handleCommand(clientID string, cmd string) {
 			elapsed = 0
 			lastLapTime = 0 // Clear lap time if only one client
 			lastLapClient = ""
+			turnsCompleted = 0
 			stateMux.Unlock()
 		}
 		clientsMux.Unlock() // Unlock clientsMux
@@ -261,6 +279,7 @@ func handleCommand(clientID string, cmd string) {
 		lastLapTime = 0 // Reset lap time as well
 		lastLapClient = ""
 		lapHistory = []Lap{} // Clear lap history
+		turnsCompleted = 0   // Reset turns completed counter
 	}
 	// State change occurred, broadcast update
 	go broadcastState() // Use a goroutine
