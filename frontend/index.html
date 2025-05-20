@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <title>Cyberpunk Timer</title>
+        <style>
+            body {
+                margin: 0;
+                padding: 0;
+                background: #0f0f1a;
+                color: #00ffff;
+                font-family: "Orbitron", sans-serif;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                height: 100vh;
+                text-shadow:
+                    0 0 5px #00ffff,
+                    0 0 10px #00ffff;
+            }
+
+            .value {
+                font-size: 6em;
+                letter-spacing: 0.1em;
+                margin-bottom: 30px;
+            }
+
+            .buttons {
+                display: flex;
+                gap: 20px;
+            }
+
+            button {
+                background: black;
+                border: 2px solid #ff00ff;
+                color: #ff00ff;
+                padding: 12px 24px;
+                font-size: 1.2em;
+                font-family: "Orbitron", sans-serif;
+                text-transform: uppercase;
+                cursor: pointer;
+                transition: 0.2s ease;
+                text-shadow: 0 0 5px #ff00ff;
+            }
+
+            button:hover {
+                background: #ff00ff;
+                color: black;
+                box-shadow:
+                    0 0 10px #ff00ff,
+                    0 0 20px #ff00ff;
+            }
+        </style>
+
+        <!-- Cyberpunk font -->
+        <link
+            href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600&display=swap"
+            rel="stylesheet"
+        />
+    </head>
+    <body>
+        <div class="value" id="timer">0.0</div>
+        <div class="buttons">
+            <button id="start">Start</button>
+            <button id="pause">Pause</button>
+            <button id="reset">Reset</button>
+        </div>
+
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+        <script>
+            const timerElement = document.getElementById("timer");
+            const socket = new WebSocket("ws://localhost:8080/ws");
+
+            let currentTime = 0;
+
+            socket.onmessage = (event) => {
+                let msg = {};
+                try {
+                    msg = JSON.parse(event.data);
+                } catch (err) {
+                    console.error("Bad JSON:", event.data);
+                    return;
+                }
+
+                if (msg.type === "update") {
+                    const newTime = msg.time;
+                    if (typeof anime !== "undefined") {
+                        anime({
+                            targets: { val: currentTime },
+                            val: newTime,
+                            duration: 100,
+                            easing: "linear",
+                            update: (anim) => {
+                                currentTime = anim.animations[0].currentValue;
+                                timerElement.textContent = (
+                                    currentTime / 1000
+                                ).toFixed(1);
+                            },
+                        });
+                    }
+                }
+            };
+
+            const sendCommand = (cmd) => {
+                socket.send(JSON.stringify({ type: "command", command: cmd }));
+            };
+
+            document.getElementById("start").onclick = () =>
+                sendCommand("start");
+            document.getElementById("pause").onclick = () =>
+                sendCommand("pause");
+            document.getElementById("reset").onclick = () =>
+                sendCommand("reset");
+        </script>
+    </body>
+</html>
