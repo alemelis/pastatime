@@ -20,17 +20,24 @@
                     0 0 10px #00ffff;
             }
 
+            .controller {
+                font-size: 1.5em;
+                margin-bottom: 10px;
+                color: #ff00ff;
+                text-shadow: 0 0 5px #ff00ff;
+            }
+
             .value {
                 font-size: 6em;
                 letter-spacing: 0.1em;
-                margin-bottom: 20px; /* Reduced margin */
+                margin-bottom: 10px;
             }
 
-            .controller {
-                font-size: 1.5em;
+            .lap-time {
+                font-size: 1.8em;
+                color: #00ff00;
+                text-shadow: 0 0 5px #00ff00;
                 margin-bottom: 30px;
-                color: #ff00ff; /* Highlight controller name */
-                text-shadow: 0 0 5px #ff00ff;
             }
 
             .buttons {
@@ -63,8 +70,23 @@
                 opacity: 0.5;
                 cursor: not-allowed;
                 box-shadow: none;
-                background: black; /* Ensure disabled buttons don't change background */
+                background: black;
                 color: #ff00ff;
+            }
+
+            .lap-history {
+                margin-top: 20px;
+                color: #00ffff;
+                text-shadow: 0 0 5px #00ffff;
+            }
+
+            .lap-history ul {
+                list-style-type: none;
+                padding: 0;
+            }
+
+            .lap-history li {
+                margin-bottom: 5px;
             }
         </style>
 
@@ -77,26 +99,33 @@
     <body>
         <div class="controller" id="controller">Waiting for controller...</div>
         <div class="value" id="timer">0.0</div>
+        <div class="lap-time" id="lapTimeDisplay"></div>
         <div class="buttons">
             <button id="start">Start</button>
             <button id="pause">Pause</button>
             <button id="reset">Reset</button>
             <button id="next">Next</button>
-            <!-- Added Next button -->
+        </div>
+
+        <div class="lap-history" id="lapHistory">
+            <!-- Lap history will be displayed here -->
         </div>
 
         <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
         <script>
             const timerElement = document.getElementById("timer");
-            const controllerElement = document.getElementById("controller"); // Added controller element
+            const lapTimeDisplayElement =
+                document.getElementById("lapTimeDisplay");
+            const lapHistoryElement = document.getElementById("lapHistory");
+            const controllerElement = document.getElementById("controller");
             const startButton = document.getElementById("start");
             const pauseButton = document.getElementById("pause");
             const resetButton = document.getElementById("reset");
-            const nextButton = document.getElementById("next"); // Added next button element
+            const nextButton = document.getElementById("next");
             const socket = new WebSocket("ws://localhost:8080/ws");
 
             let currentTime = 0;
-            let yourId = null; // To store the client's own ID
+            let yourId = null;
 
             socket.onmessage = (event) => {
                 let msg = {};
@@ -109,8 +138,11 @@
 
                 if (msg.type === "update") {
                     const newTime = msg.time;
+                    const lapTime = msg.lapTime;
+                    const lastLapClient = msg.lastLapClient;
+                    const lapHistory = msg.lapHistory;
                     const activeClient = msg.activeClient;
-                    yourId = msg.yourId; // Store your own ID
+                    yourId = msg.yourId;
 
                     // Update timer display with animation
                     if (typeof anime !== "undefined") {
@@ -127,12 +159,31 @@
                             },
                         });
                     } else {
-                        // Fallback if anime.js is not loaded
                         currentTime = newTime;
                         timerElement.textContent = (currentTime / 1000).toFixed(
                             1,
                         );
                     }
+
+                    // Update lap time display with client name
+                    if (lapTime > 0 && lastLapClient) {
+                        lapTimeDisplayElement.textContent = `Lap (${lastLapClient}): ${(lapTime / 1000).toFixed(1)}`;
+                    } else {
+                        lapTimeDisplayElement.textContent = "";
+                    }
+
+                    // Update lap history display
+                    let historyHTML = "<ul>";
+                    if (lapHistory && lapHistory.length > 0) {
+                        lapHistory.forEach((lap) => {
+                            // console.log("Lap object:", lap);
+                            historyHTML += `<li>Lap (${lap.client}): ${(lap.timeMs / 1000).toFixed(1)}</li>`;
+                        });
+                    } else {
+                        historyHTML += "<li>No laps yet</li>";
+                    }
+                    historyHTML += "</ul>";
+                    lapHistoryElement.innerHTML = historyHTML;
 
                     // Update controller display and button states
                     if (activeClient) {
@@ -141,7 +192,7 @@
                         startButton.disabled = !isYou;
                         pauseButton.disabled = !isYou;
                         resetButton.disabled = !isYou;
-                        nextButton.disabled = !isYou; // Only the active client can pass control
+                        nextButton.disabled = !isYou;
                     } else {
                         controllerElement.textContent = "No active controller";
                         startButton.disabled = true;
@@ -153,9 +204,7 @@
             };
 
             const sendCommand = (cmd) => {
-                // Only send command if this client is the active one (redundant check for safety)
                 if (!startButton.disabled || cmd === "next") {
-                    // Allow sending "next" even if other buttons are disabled temporarily
                     socket.send(
                         JSON.stringify({ type: "command", command: cmd }),
                     );
@@ -167,7 +216,7 @@
             startButton.onclick = () => sendCommand("start");
             pauseButton.onclick = () => sendCommand("pause");
             resetButton.onclick = () => sendCommand("reset");
-            nextButton.onclick = () => sendCommand("next"); // Added click handler for Next button
+            nextButton.onclick = () => sendCommand("next");
 
             // Disable buttons initially
             startButton.disabled = true;

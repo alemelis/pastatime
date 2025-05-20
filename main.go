@@ -15,6 +15,12 @@ type Client struct {
 	conn *websocket.Conn
 }
 
+type Lap struct {
+	Client string        `json:"client"`
+	Time   time.Duration `json:"time"`
+	TimeMs int64         `json:"timeMs"` // included for ease of use on the frontend
+}
+
 var (
 	clients     = make(map[string]*Client)
 	clientOrder []string // Keep track of client connection order
@@ -27,10 +33,13 @@ var (
 	}
 
 	// Stopwatch state
-	isRunning = false
-	startTime time.Time
-	elapsed   time.Duration
-	stateMux  sync.Mutex
+	isRunning     = false
+	startTime     time.Time
+	elapsed       time.Duration
+	lastLapTime   time.Duration // To store the lap time duration
+	lastLapClient string        // To store the ID of the client who set the last lap
+	lapHistory    []Lap
+	stateMux      sync.Mutex
 	// broadcastCh is no longer needed as updates are sent directly
 )
 
@@ -81,9 +90,9 @@ func handleWS(w http.ResponseWriter, r *http.Request) {
 	clientOrder = append(clientOrder, id) // Add to order
 
 	// If no client is active, make this one active
-	if activeClientID == "" {
-		activeClientID = id
-		log.Println("Setting initial active client:", id)
+	if activeClientID == "" && len(clientOrder) > 0 {
+		activeClientID = clientOrder[0] // Assign first client as active
+		log.Println("Setting initial active client:", activeClientID)
 	}
 	clientsMux.Unlock()
 
@@ -129,11 +138,12 @@ func handleWS(w http.ResponseWriter, r *http.Request) {
 	// If the disconnected client was the active one, pass control
 	if activeClientID == id {
 		if len(clientOrder) > 0 {
-			// Find the next client in the *remaining* list
-			// The current activeClientID is already removed from clientOrder
-			// So the next client is simply the first one in the new list
+			// Find the index of the disconnected client in the *original* order list
+			// (before removal) to determine who was next.
+			// Simpler approach: just assign to the first client in the new list.
 			activeClientID = clientOrder[0] // Pass to the next in line (wrap around to first of remaining)
 			log.Println("Active client disconnected, passing control to:", activeClientID)
+
 		} else {
 			activeClientID = "" // No clients left
 			log.Println("Last client disconnected, no active client.")
@@ -157,10 +167,33 @@ func handleCommand(clientID string, cmd string) {
 		clientsMux.Unlock()
 		return // Only active client can send commands
 	}
-	clientsMux.Unlock() // Unlock clientsMux before acquiring stateMux if not handling 'next'
+	clientsMux.Unlock() // Unlock clientsMux before potentially acquiring stateMux
 
 	// Handle 'next' command separately as it modifies clientsMux protected state
 	if cmd == "next" {
+		stateMux.Lock() // Lock stateMux to read current time and reset
+
+		// Calculate the total elapsed time for the current lap
+		var currentLap time.Duration
+		if isRunning {
+			currentLap = elapsed + time.Since(startTime)
+		} else {
+			currentLap = elapsed
+		}
+		lastLapTime = currentLap // Store the lap time duration
+		lastLapClient = clientID // Store the client ID who set the lap time
+
+		// Append the lap to the history
+		lapHistory = append(lapHistory, Lap{Client: clientID, Time: currentLap, TimeMs: currentLap.Milliseconds()})
+		log.Println("Lap added to history. Current lapHistory:", lapHistory) // Log lapHistory
+
+		// Reset the stopwatch state and start for the next client.
+		isRunning = true       // Start immediately for the next client
+		startTime = time.Now() // Set new start time
+		elapsed = 0            // Reset elapsed time
+
+		stateMux.Unlock() // Unlock stateMux
+
 		clientsMux.Lock() // Re-acquire clientsMux lock for 'next' command
 		if len(clientOrder) > 1 {
 			// Find the current active client's index
@@ -180,9 +213,23 @@ func handleCommand(clientID string, cmd string) {
 			} else {
 				// Should not happen if activeClientID is always in clientOrder
 				log.Println("Active client ID not found in client order list.")
+				// Fallback: assign to first client if current not found (shouldn't be needed)
+				if len(clientOrder) > 0 {
+					activeClientID = clientOrder[0]
+				} else {
+					activeClientID = "" // No clients left
+				}
 			}
 		} else {
 			log.Println("Only one client connected, cannot pass control.")
+			// If only one client, reset and start for them again
+			stateMux.Lock()
+			isRunning = true
+			startTime = time.Now()
+			elapsed = 0
+			lastLapTime = 0 // Clear lap time if only one client
+			lastLapClient = ""
+			stateMux.Unlock()
 		}
 		clientsMux.Unlock() // Unlock clientsMux
 
@@ -211,6 +258,9 @@ func handleCommand(clientID string, cmd string) {
 	case "reset":
 		isRunning = false
 		elapsed = 0
+		lastLapTime = 0 // Reset lap time as well
+		lastLapClient = ""
+		lapHistory = []Lap{} // Clear lap history
 	}
 	// State change occurred, broadcast update
 	go broadcastState() // Use a goroutine
@@ -227,7 +277,7 @@ func timerLoop() {
 	}
 }
 
-// broadcastState sends the current timer value, active client ID, and own client ID to all clients
+// broadcastState sends the current timer value, active client ID, lap time, and own client ID to all clients
 func broadcastState() {
 	clientsMux.Lock()
 	defer clientsMux.Unlock()
@@ -245,13 +295,20 @@ func broadcastState() {
 		total = elapsed
 	}
 	ms := total.Milliseconds()
+	lapMs := lastLapTime.Milliseconds() // Get lap time in milliseconds
+	lapClient := lastLapClient          // Get last lap client ID
+	history := lapHistory               //Get lap history
 	stateMux.Unlock()
 
+	// log.Println("Broadcasting state. Current lapHistory:", history) // Log lapHistory
 	// Prepare the base message structure
 	baseMsg := map[string]interface{}{
-		"type":         "update",
-		"time":         ms,
-		"activeClient": activeClientID,
+		"type":          "update",
+		"time":          ms,
+		"lapTime":       lapMs,     // Add lap time
+		"lastLapClient": lapClient, // Add last lap client ID
+		"lapHistory":    history,
+		"activeClient":  activeClientID,
 	}
 
 	for id, c := range clients {
@@ -262,7 +319,7 @@ func broadcastState() {
 		}
 		personalMsg["yourId"] = id // Add the client's own ID
 
-		personalData, err := json.Marshal(personalMsg)
+		data, err := json.Marshal(personalMsg)
 		if err != nil {
 			log.Println("json marshal error:", err)
 			continue // Skip this client if marshal fails
@@ -272,15 +329,15 @@ func broadcastState() {
 		go func(conn *websocket.Conn, data []byte) {
 			err := conn.WriteMessage(websocket.TextMessage, data)
 			if err != nil {
-				log.Println("write error:", err)
+				// log.Println("write error:", err) // Suppress frequent write errors from disconnecting clients
 				// Note: Error here might indicate a disconnected client.
 				// Handle client removal in handleWS read loop upon read error.
 			}
-		}(c.conn, personalData)
+		}(c.conn, data)
 	}
 }
 
-// sendStateToClient sends the current timer value, active client ID, and own client ID to a specific client
+// sendStateToClient sends the current timer value, active client ID, lap time, and own client ID to a specific client
 func sendStateToClient(c *Client) {
 	clientsMux.Lock() // Lock clientsMux to access activeClientID
 	stateMux.Lock()
@@ -294,12 +351,18 @@ func sendStateToClient(c *Client) {
 		total = elapsed
 	}
 	ms := total.Milliseconds()
-
+	lapMs := lastLapTime.Milliseconds() // Get lap time in milliseconds
+	lapClient := lastLapClient          // Get last lap client ID
+	history := lapHistory
+	//history := []Lap{} //empty array
 	msg := map[string]interface{}{
-		"type":         "update",
-		"time":         ms,
-		"activeClient": activeClientID,
-		"yourId":       c.id, // Add the client's own ID
+		"type":          "update",
+		"time":          ms,
+		"lapTime":       lapMs,     // Add lap time
+		"lastLapClient": lapClient, // Add last lap client ID
+		"lapHistory":    history,
+		"activeClient":  activeClientID,
+		"yourId":        c.id, // Add the client's own ID
 	}
 	data, err := json.Marshal(msg)
 	if err != nil {
