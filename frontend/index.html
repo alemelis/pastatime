@@ -23,7 +23,14 @@
             .value {
                 font-size: 6em;
                 letter-spacing: 0.1em;
+                margin-bottom: 20px; /* Reduced margin */
+            }
+
+            .controller {
+                font-size: 1.5em;
                 margin-bottom: 30px;
+                color: #ff00ff; /* Highlight controller name */
+                text-shadow: 0 0 5px #ff00ff;
             }
 
             .buttons {
@@ -51,6 +58,14 @@
                     0 0 10px #ff00ff,
                     0 0 20px #ff00ff;
             }
+
+            button:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+                box-shadow: none;
+                background: black; /* Ensure disabled buttons don't change background */
+                color: #ff00ff;
+            }
         </style>
 
         <!-- Cyberpunk font -->
@@ -60,19 +75,28 @@
         />
     </head>
     <body>
+        <div class="controller" id="controller">Waiting for controller...</div>
         <div class="value" id="timer">0.0</div>
         <div class="buttons">
             <button id="start">Start</button>
             <button id="pause">Pause</button>
             <button id="reset">Reset</button>
+            <button id="next">Next</button>
+            <!-- Added Next button -->
         </div>
 
         <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
         <script>
             const timerElement = document.getElementById("timer");
+            const controllerElement = document.getElementById("controller"); // Added controller element
+            const startButton = document.getElementById("start");
+            const pauseButton = document.getElementById("pause");
+            const resetButton = document.getElementById("reset");
+            const nextButton = document.getElementById("next"); // Added next button element
             const socket = new WebSocket("ws://localhost:8080/ws");
 
             let currentTime = 0;
+            let yourId = null; // To store the client's own ID
 
             socket.onmessage = (event) => {
                 let msg = {};
@@ -85,6 +109,10 @@
 
                 if (msg.type === "update") {
                     const newTime = msg.time;
+                    const activeClient = msg.activeClient;
+                    yourId = msg.yourId; // Store your own ID
+
+                    // Update timer display with animation
                     if (typeof anime !== "undefined") {
                         anime({
                             targets: { val: currentTime },
@@ -98,20 +126,54 @@
                                 ).toFixed(1);
                             },
                         });
+                    } else {
+                        // Fallback if anime.js is not loaded
+                        currentTime = newTime;
+                        timerElement.textContent = (currentTime / 1000).toFixed(
+                            1,
+                        );
+                    }
+
+                    // Update controller display and button states
+                    if (activeClient) {
+                        controllerElement.textContent = `Controller: ${activeClient}`;
+                        const isYou = yourId === activeClient;
+                        startButton.disabled = !isYou;
+                        pauseButton.disabled = !isYou;
+                        resetButton.disabled = !isYou;
+                        nextButton.disabled = !isYou; // Only the active client can pass control
+                    } else {
+                        controllerElement.textContent = "No active controller";
+                        startButton.disabled = true;
+                        pauseButton.disabled = true;
+                        resetButton.disabled = true;
+                        nextButton.disabled = true;
                     }
                 }
             };
 
             const sendCommand = (cmd) => {
-                socket.send(JSON.stringify({ type: "command", command: cmd }));
+                // Only send command if this client is the active one (redundant check for safety)
+                if (!startButton.disabled || cmd === "next") {
+                    // Allow sending "next" even if other buttons are disabled temporarily
+                    socket.send(
+                        JSON.stringify({ type: "command", command: cmd }),
+                    );
+                } else {
+                    console.log("Not the active controller.");
+                }
             };
 
-            document.getElementById("start").onclick = () =>
-                sendCommand("start");
-            document.getElementById("pause").onclick = () =>
-                sendCommand("pause");
-            document.getElementById("reset").onclick = () =>
-                sendCommand("reset");
+            startButton.onclick = () => sendCommand("start");
+            pauseButton.onclick = () => sendCommand("pause");
+            resetButton.onclick = () => sendCommand("reset");
+            nextButton.onclick = () => sendCommand("next"); // Added click handler for Next button
+
+            // Disable buttons initially
+            startButton.disabled = true;
+            pauseButton.disabled = true;
+            resetButton.disabled = true;
+            nextButton.disabled = true;
         </script>
     </body>
 </html>
