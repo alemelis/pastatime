@@ -1,0 +1,91 @@
+body {
+    margin: 0;
+    padding: 0;
+    background: #0f0f1a;
+    color: #00ffff;
+    font-family: "Orbitron", sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    text-shadow:
+        0 0 5px #00ffff,
+        0 0 10px #00ffff;
+}
+
+.client-name {
+    font-size: 2em;
+    margin-bottom: 10px;
+    color: #00ffff;
+    text-shadow: 0 0 5px #00ffff;
+}
+
+.controller {
+    font-size: 1.5em;
+    margin-bottom: 10px;
+    color: #ff00ff;
+    text-shadow: 0 0 5px #ff00ff;
+}
+
+.value {
+    font-size: 6em;
+    letter-spacing: 0.1em;
+    margin-bottom: 10px;
+}
+
+.lap-time {
+    font-size: 1.8em;
+    color: #00ff00;
+    text-shadow: 0 0 5px #00ff00;
+    margin-bottom: 30px;
+}
+
+.buttons {
+    display: flex;
+    gap: 20px;
+}
+
+button {
+    background: black;
+    border: 2px solid #ff00ff;
+    color: #ff00ff;
+    padding: 12px 24px;
+    font-size: 1.2em;
+    font-family: "Orbitron", sans-serif;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: 0.2s ease;
+    text-shadow: 0 0 5px #ff00ff;
+}
+
+button:hover {
+    background: #ff00ff;
+    color: black;
+    box-shadow:
+        0 0 10px #ff00ff,
+        0 0 20px #ff00ff;
+}
+
+button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    box-shadow: none;
+    background: black;
+    color: #ff00ff;
+}
+
+.lap-history {
+    margin-top: 20px;
+    color: #00ffff;
+    text-shadow: 0 0 5px #00ffff;
+}
+
+.lap-history ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+.lap-history li {
+    margin-bottom: 5px;
+}
