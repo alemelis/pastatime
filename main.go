@@ -31,6 +31,15 @@ var (
 	broadcastCh = make(chan int64, 10)
 )
 
+var (
+	names      = []string{"ciccio", "pluto", "topolino"}
+	adjectives = []string{"pasticcio", "rognoso", "noioso"}
+)
+
+func generateName() string {
+	return names[time.Now().Unix()%int64(len(names))] + "_" + adjectives[time.Now().Unix()%int64(len(adjectives))]
+}
+
 func main() {
 	go timerLoop()
 
@@ -49,7 +58,16 @@ func handleWS(w http.ResponseWriter, r *http.Request) {
 	}
 	defer conn.Close()
 
-	id := time.Now().Format("150405.000")
+	var id string
+	for {
+		id = generateName()
+		clientsMux.Lock()
+		_, exists := clients[id]
+		clientsMux.Unlock()
+		if !exists {
+			break
+		}
+	}
 	client := &Client{id: id, conn: conn}
 
 	clientsMux.Lock()
