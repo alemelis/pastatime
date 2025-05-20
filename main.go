@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/goombaio/namegenerator"
 	"github.com/gorilla/websocket"
 )
 
@@ -26,6 +27,7 @@ var (
 	clients     = make(map[string]*Client)
 	clientOrder []string // Keep track of client connection order
 	clientsMux  sync.Mutex
+	clientIndex int // Track current client index
 
 	activeClientID string // ID of the client currently in control
 	turnsCompleted int    // Counter to track completed turns
@@ -45,18 +47,10 @@ var (
 	// broadcastCh is no longer needed as updates are sent directly
 )
 
-var (
-	clientIndex int // Track current client index
-	names       = []string{"sorcio", "mostro", "cane"}
-	adjectives  = []string{"schifoso", "rognoso", "mostruoso"}
-)
-
 func generateName() string {
-	// Use current nanoseconds to ensure a unique name even if multiple clients connect in the same second
-	nano := time.Now().UnixNano()
-	name := names[nano%int64(len(names))]
-	adjective := adjectives[nano%int64(len(adjectives))]
-	return name + "_" + adjective
+	seed := time.Now().UTC().UnixNano()
+	nameGenerator := namegenerator.NewNameGenerator(seed)
+	return nameGenerator.Generate()
 }
 
 func main() {
