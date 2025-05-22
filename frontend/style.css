@@ -1,7 +1,7 @@
 body {
     margin: 0;
-    padding: 20px; /* Add some padding */
-    background: white;
+    padding: 0; /* Remove padding */
+    /* background: white; - Remove this line */
     background-image:
         linear-gradient(90deg, rgba(200, 0, 0, 0.5) 50%, transparent 0),
         linear-gradient(rgba(200, 0, 0, 0.5) 50%, transparent 0);
@@ -11,101 +11,31 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    min-height: 100vh; /* Use min-height instead of height for better content handling */
-    position: relative; /* Added for positioning client list */
+    justify-content: center; /* Center content vertically */
+    min-height: 100vh;
 }
 
-.fascinate-inline-regular {
-    font-family: "Fascinate Inline", system-ui;
-    font-weight: 400;
-    font-style: normal;
-}
-
-h1,
-h2,
-h3,
-.client-name,
-.controller,
-.value {
-    /* Removed .lap-time */
-    font-family: "Fascinate Inline", system-ui;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-}
-
-/* Styling for the "big pills" - Removed .lap-time */
-.client-name,
-.controller,
-.value,
-#asciiLoadingBar,
-.lap-history {
+.landing-container {
+    text-align: center; /* Center content horizontally */
     background-color: #f8f8e7; /* Light beige background */
-    padding: 10px 20px; /* Add padding inside the pill */
-    border-radius: 25px; /* Rounded corners for pill shape */
-    margin: 10px auto; /* Add vertical margin and center horizontally */
-    width: fit-content; /* Shrink background to fit content */
-    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3); /* Subtle shadow for a "board" effect */
+    padding: 40px;
+    border-radius: 15px;
+    box-shadow: 5px 5px 15px rgba(0, 0, 0, 0.3);
 }
 
-.client-name {
-    font-size: 3em; /* Increased size */
-    color: #006400; /* Dark green for better contrast */
-    text-shadow: 2px 2px 3px #000000; /* Darker shadow */
-}
-
-.controller {
-    font-size: 2em; /* Increased size */
-    color: #4a2c2a; /* Keep dark brown */
-    text-shadow: none; /* Removed shadow for better contrast */
-}
-
-.timer-container {
-    position: relative; /* Needed for positioning */
-    width: 80%; /* Adjust width as needed */
-    max-width: 500px; /* Max width for larger screens */
-    margin-bottom: 30px; /* Keep margin for spacing below the timer area */
-    text-align: center; /* Center timer value and loading bar */
-}
-
-.value {
-    font-size: 6em; /* Adjusted size */
-    letter-spacing: 0.1em; /* Adjusted letter spacing */
-    text-shadow: 3px 3px 5px #000000; /* Darker shadow */
-    position: relative; /* Keep timer positioned */
-    z-index: 1; /* Ensure timer is above loading bar */
-    /* Initial color is set by .timer-green or .timer-red class */
-}
-
-/* Timer colors based on time */
-.value.timer-green {
-    color: #006400; /* Dark green */
-}
-
-.value.timer-red {
+.landing-container h1 {
+    font-size: 4em;
+    margin-bottom: 30px;
     color: #8b0000; /* Dark red */
-}
-
-#asciiLoadingBar {
-    font-family: monospace; /* Use a monospace font for consistent character width */
-    white-space: pre; /* Preserve whitespace for the bar characters */
-    /* margin and padding inherited from the combined pill style */
-    color: #4a2c2a; /* Dark brown text color */
-}
-
-/* Removed .lap-time style block */
-
-.buttons {
-    display: flex;
-    gap: 20px; /* Adjusted gap */
-    margin-top: 20px; /* Add margin above buttons */
+    text-shadow: 2px 2px 3px #ff4500; /* Orange-red shadow */
 }
 
 button {
     background: #006400; /* Dark green background */
     border: 3px solid #8b0000; /* Dark red border */
     color: #ffffff; /* White text for contrast */
-    padding: 12px 25px; /* Adjusted padding */
-    font-size: 1.2em; /* Adjusted size */
+    padding: 15px 30px;
+    font-size: 1.5em;
     font-family: "Fascinate Inline", system-ui;
     text-transform: uppercase;
     cursor: pointer;
@@ -121,59 +51,11 @@ button:hover {
 }
 
 button:disabled {
-    opacity: 0.7; /* Slightly less transparent */
+    opacity: 0.7;
     cursor: not-allowed;
     box-shadow: none;
-    background: #d3d3d3; /* Light grey */
-    color: #a9a9a9; /* Dark grey */
+    background: #d3d3d3;
+    color: #a9a9a9;
 }
 
-/* Adjusted styles for list within the lap history pill */
-.lap-history ul {
-    list-style-type: "🍝 "; /* Keep pasta emoji */
-    padding-left: 20px; /* Adjusted padding for list inside the pill */
-    text-align: left; /* Align list items to the left */
-}
-
-.lap-history li {
-    margin-bottom: 5px; /* Slightly reduced spacing */
-    font-size: 1em; /* Slightly smaller text for list items */
-    line-height: 1.3; /* Adjusted line height */
-    color: #4a2c2a; /* Ensure list item text is dark brown */
-    font-family: "Georgia", serif; /* Use Georgia for readability in list */
-}
-
-.client-list-container {
-    position: absolute;
-    top: 20px; /* Distance from the top */
-    right: 20px; /* Distance from the right */
-    background-color: #f8f8e7; /* Light beige background */
-    padding: 15px; /* Padding inside the container */
-    border: 2px solid #8b0000; /* Dark red border */
-    border-radius: 10px; /* Rounded corners */
-    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3); /* Subtle shadow */
-    font-family: "Georgia", serif; /* Readable font for client list */
-    color: #4a2c2a; /* Dark brown text color */
-    z-index: 10; /* Ensure it's above other content */
-}
-
-.client-list-container h3 {
-    margin-top: 0;
-    font-size: 1.2em;
-    color: #8b0000; /* Dark red heading */
-    text-shadow: none;
-    letter-spacing: normal;
-    text-transform: none;
-    font-family: "Georgia", serif;
-}
-
-.client-list-container ul {
-    list-style: none; /* Remove default list style */
-    padding: 0;
-    margin: 0;
-}
-
-.client-list-container li {
-    margin-bottom: 5px;
-    font-size: 0.9em;
-}
+/* Removed all other specific element styles */

@@ -2,7 +2,7 @@
 <html lang="en">
     <head>
         <meta charset="UTF-8" />
-        <title>Pastatime</title>
+        <title>Pastatime - New Session</title>
         <link rel="stylesheet" href="style.css" />
 
         <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -17,27 +17,11 @@
         />
     </head>
     <body>
-        <div class="client-list-container" id="clientListContainer">
-            <h3>Connected Clients:</h3>
-            <ul id="clientList"></ul>
-        </div>
-        <div class="client-name" id="clientNameDisplay"></div>
-        <div class="controller" id="controller">Waiting for controller...</div>
-        <div class="timer-container">
-            <div class="value" id="timer">0.0</div>
-            <div id="asciiLoadingBar"></div>
-        </div>
-        <!-- Removed lap-time div -->
-        <div class="buttons">
-            <button id="start">Start</button>
-            <button id="pause">Pause</button>
-            <button id="reset">Reset</button>
-            <button id="next">Next</button>
+        <div class="landing-container">
+            <h1>Pastatime</h1>
+            <button id="newSessionButton">Start a New Session</button>
         </div>
 
-        <div class="lap-history" id="lapHistory"></div>
-
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
         <script src="script.js"></script>
     </body>
 </html>
