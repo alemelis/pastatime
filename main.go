@@ -53,6 +53,17 @@ func generateName() string {
 	return nameGenerator.Generate()
 }
 
+// timerLoop sends the current timer state periodically
+func timerLoop() {
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop() // Good practice to stop the ticker
+
+	for range ticker.C {
+		// Broadcast state to all clients
+		broadcastState()
+	}
+}
+
 func main() {
 	go timerLoop()
 
@@ -176,7 +187,7 @@ func handleCommand(clientID string, cmd string) {
 			currentLap = elapsed
 		}
 		lastLapTime = currentLap // Store the lap time duration
-		lastLapClient = clientID // Store the client ID who set the lap time
+		lastLapClient = clientID // Store the client ID who set the last lap
 
 		// Increment turns completed counter
 		turnsCompleted++
@@ -279,17 +290,6 @@ func handleCommand(clientID string, cmd string) {
 	go broadcastState() // Use a goroutine
 }
 
-// timerLoop sends the current timer state periodically
-func timerLoop() {
-	ticker := time.NewTicker(100 * time.Millisecond)
-	defer ticker.Stop() // Good practice to stop the ticker
-
-	for range ticker.C {
-		// Broadcast state to all clients
-		broadcastState()
-	}
-}
-
 // broadcastState sends the current timer value, active client ID, lap time, and own client ID to all clients
 func broadcastState() {
 	clientsMux.Lock()
@@ -313,6 +313,12 @@ func broadcastState() {
 	history := lapHistory               //Get lap history
 	stateMux.Unlock()
 
+	// Get list of all client IDs
+	clientIDs := make([]string, 0, len(clients))
+	for id := range clients {
+		clientIDs = append(clientIDs, id)
+	}
+
 	// log.Println("Broadcasting state. Current lapHistory:", history) // Log lapHistory
 	// Prepare the base message structure
 	baseMsg := map[string]interface{}{
@@ -322,6 +328,7 @@ func broadcastState() {
 		"lastLapClient": lapClient, // Add last lap client ID
 		"lapHistory":    history,
 		"activeClient":  activeClientID,
+		"clients":       clientIDs, // Add the list of all client IDs
 	}
 
 	for id, c := range clients {
@@ -368,6 +375,13 @@ func sendStateToClient(c *Client) {
 	lapClient := lastLapClient          // Get last lap client ID
 	history := lapHistory
 	//history := []Lap{} //empty array
+
+	// Get list of all client IDs
+	clientIDs := make([]string, 0, len(clients))
+	for id := range clients {
+		clientIDs = append(clientIDs, id)
+	}
+
 	msg := map[string]interface{}{
 		"type":          "update",
 		"time":          ms,
@@ -375,7 +389,8 @@ func sendStateToClient(c *Client) {
 		"lastLapClient": lapClient, // Add last lap client ID
 		"lapHistory":    history,
 		"activeClient":  activeClientID,
-		"yourId":        c.id, // Add the client's own ID
+		"yourId":        c.id,      // Add the client's own ID
+		"clients":       clientIDs, // Add the list of all client IDs
 	}
 	data, err := json.Marshal(msg)
 	if err != nil {

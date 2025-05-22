@@ -1,22 +1,5 @@
-const timerElement = document.getElementById("timer");
-const lapTimeDisplayElement = document.getElementById("lapTimeDisplay");
-const lapHistoryElement = document.getElementById("lapHistory");
-const controllerElement = document.getElementById("controller");
-const clientNameDisplayElement = document.getElementById("clientNameDisplay"); // Added client name
-const startButton = document.getElementById("start");
-const pauseButton = document.getElementById("pause");
-const resetButton = document.getElementById("reset");
-const nextButton = document.getElementById("next");
-const asciiLoadingBarElement = document.getElementById("asciiLoadingBar"); // Get the ASCII loading bar element
-const socket = new WebSocket("ws://localhost:8080/ws");
-
-let currentTime = 0;
-let yourId = null;
-const oneMinuteInMs = 60000; // 1 minute in milliseconds
-const totalLoadingTime = oneMinuteInMs; // The time it takes for the loading bar to fill
-const barLength = 40; // Reduced bar length slightly for better fit in the pill
-
-// Function to generate Unicode loading bar
+// Function to generate Unicode loading bar (kept outside DOMContentLoaded as it\'s a pure function)
+const barLength = 40; // Length of the Unicode loading bar
 const generateUnicodeBar = (percentage) => {
   const filledLength = Math.round((percentage / 100) * barLength);
   const emptyLength = barLength - filledLength;
@@ -26,120 +9,207 @@ const generateUnicodeBar = (percentage) => {
   return `${filledBar}${emptyBar} ${percentage.toFixed(1)}%`;
 };
 
-socket.onmessage = (event) => {
-  let msg = {};
-  try {
-    msg = JSON.parse(event.data);
-  } catch (err) {
-    console.error("Bad JSON:", event.data);
-    return;
+// Wait for the DOM to be fully loaded before accessing elements
+document.addEventListener("DOMContentLoaded", () => {
+  console.log("DOMContentLoaded fired. Attempting to get elements..."); // Log to check if this runs
+
+  const timerElement = document.getElementById("timer");
+  const lapTimeDisplayElement = document.getElementById("lapTimeDisplay"); // Still exists in JS, but not used
+  const lapHistoryElement = document.getElementById("lapHistory");
+  const controllerElement = document.getElementById("controller");
+  const clientNameDisplayElement = document.getElementById("clientNameDisplay"); // Added client name
+  const startButton = document.getElementById("start");
+  const pauseButton = document.getElementById("pause");
+  const resetButton = document.getElementById("reset");
+  const nextButton = document.getElementById("next");
+  const asciiLoadingBarElement = document.getElementById("asciiLoadingBar"); // Get the ASCII loading bar element
+  const clientListElement = document.getElementById("clientList"); // Get the client list element
+  const socket = new WebSocket("ws://localhost:8080/ws");
+
+  // Check if the loading bar element was found
+  if (!asciiLoadingBarElement) {
+    console.error(
+      "Error: Element with ID 'asciiLoadingBar' not found in the DOM.",
+    );
   }
 
-  if (msg.type === "update") {
-    const newTime = msg.time;
-    const lapTime = msg.lapTime;
-    const lastLapClient = msg.lastLapClient;
-    const lapHistory = msg.lapHistory;
-    const activeClient = msg.activeClient;
-    yourId = msg.yourId;
+  let currentTime = 0;
+  let yourId = null;
+  const oneMinuteInMs = 60000; // 1 minute in milliseconds
+  const totalLoadingTime = oneMinuteInMs; // The time it takes for the loading bar to fill
 
-    // Update client name display
-    clientNameDisplayElement.textContent = `You are: ${yourId}`;
+  socket.onmessage = (event) => {
+    let msg = {};
+    try {
+      msg = JSON.parse(event.data);
+    } catch (err) {
+      console.error("Bad JSON:", event.data);
+      return;
+    }
 
-    // Calculate loading percentage
-    const loadingPercentage = Math.min(newTime / totalLoadingTime, 1) * 100;
+    if (msg.type === "update") {
+      const newTime = msg.time;
+      const lapTime = msg.lapTime; // Still exists in msg, but not used
+      const lastLapClient = msg.lastLapClient; // Still exists in msg, but not used
+      const lapHistory = msg.lapHistory;
+      const activeClient = msg.activeClient;
+      const clients = msg.clients; // Get the list of clients
+      yourId = msg.yourId;
 
-    // Update Unicode loading bar
-    asciiLoadingBarElement.textContent = generateUnicodeBar(loadingPercentage);
+      // Update client name display
+      if (clientNameDisplayElement) {
+        // Added check
+        clientNameDisplayElement.textContent = `You are: ${yourId}`;
+      }
 
-    // Update timer text and color
-    if (typeof anime !== "undefined") {
-      anime({
-        targets: { val: currentTime },
-        val: newTime,
-        duration: 100,
-        easing: "linear",
-        update: (anim) => {
-          currentTime = anim.animations[0].currentValue;
+      // Update connected clients list - Sort alphabetically
+      if (clients && Array.isArray(clients) && clientListElement) {
+        // Added check for clientListElement
+        clientListElement.innerHTML = ""; // Clear the current list
+        const sortedClients = [...clients].sort(); // Create a copy and sort it
+        sortedClients.forEach((client) => {
+          const li = document.createElement("li");
+          li.textContent = client;
+          // Highlight the active client
+          if (client === activeClient) {
+            li.style.fontWeight = "bold";
+            li.style.color = "#006400"; // Dark green for active client
+          }
+          // Highlight your own ID
+          if (client === yourId && client !== activeClient) {
+            li.style.color = "#4b0082"; // Indigo for your ID if not active
+          } else if (client === yourId && client === activeClient) {
+            // If you are also the active client, the active client style takes precedence
+          }
+          clientListElement.appendChild(li);
+        });
+      }
+
+      // Calculate loading percentage
+      const loadingPercentage = Math.min(newTime / totalLoadingTime, 1) * 100;
+
+      // Update Unicode loading bar
+      // This line caused the error if asciiLoadingBarElement was null
+      if (asciiLoadingBarElement) {
+        // This check should prevent the error
+        asciiLoadingBarElement.textContent =
+          generateUnicodeBar(loadingPercentage);
+      } else {
+        console.error("asciiLoadingBarElement is null in onmessage."); // Log if it's null here
+      }
+
+      // Update timer text and color
+      if (typeof anime !== "undefined") {
+        anime({
+          targets: { val: currentTime },
+          val: newTime,
+          duration: 100,
+          easing: "linear",
+          update: (anim) => {
+            currentTime = anim.animations[0].currentValue;
+            if (timerElement) {
+              // Added check
+              timerElement.textContent = (currentTime / 1000).toFixed(1);
+            }
+
+            // Change timer color based on time
+            if (timerElement) {
+              // Added check
+              if (currentTime >= oneMinuteInMs) {
+                timerElement.classList.remove("timer-green");
+                timerElement.classList.add("timer-red");
+              } else {
+                timerElement.classList.remove("timer-red");
+                timerElement.classList.add("timer-green");
+              }
+            }
+          },
+        });
+      } else {
+        // Fallback if animejs is not loaded
+        currentTime = newTime;
+        if (timerElement) {
+          // Added check
           timerElement.textContent = (currentTime / 1000).toFixed(1);
 
-          // Change timer color based on time
+          // Change timer color based on time (fallback)
           if (currentTime >= oneMinuteInMs) {
-            timerElement.classList.remove("timer-green");
-            timerElement.classList.add("timer-red");
+            timerElement.style.color = "#8b0000"; // Dark red
           } else {
-            timerElement.classList.remove("timer-red");
-            timerElement.classList.add("timer-green");
+            timerElement.style.color = "#006400"; // Dark green
           }
-        },
-      });
-    } else {
-      // Fallback if animejs is not loaded
-      currentTime = newTime;
-      timerElement.textContent = (currentTime / 1000).toFixed(1);
+        }
+      }
 
-      // Change timer color based on time (fallback)
-      if (currentTime >= oneMinuteInMs) {
-        timerElement.style.color = "#8b0000"; // Dark red
+      // Removed lap time display update logic
+      // if (lapTime > 0 && lastLapClient) {
+      //   lapTimeDisplayElement.textContent = ""; //`Lap (${lastLapClient}): ${(lapTime / 1000).toFixed(1)}`;
+      // } else {
+      //   lapTimeDisplayElement.textContent = "";
+      // }
+
+      // Update lap history display
+      let historyHTML = "<ul>";
+      if (lapHistory && lapHistory.length > 0) {
+        lapHistory.forEach((lap) => {
+          historyHTML += `<li>${lap.client}: ${(lap.timeMs / 1000).toFixed(1)} s</li>`;
+        });
       } else {
-        timerElement.style.color = "#006400"; // Dark green
+        historyHTML += "<li>No standups yet</li>";
+      }
+      historyHTML += "</ul>";
+      if (lapHistoryElement) {
+        // Added check
+        lapHistoryElement.innerHTML = historyHTML;
+      }
+
+      // Update controller display and button states
+      if (activeClient) {
+        if (controllerElement) {
+          // Added check
+          controllerElement.textContent = `Controller: ${activeClient}`;
+        }
+        const isYou = yourId === activeClient;
+        if (startButton) startButton.disabled = !isYou;
+        if (pauseButton) pauseButton.disabled = !isYou;
+        if (resetButton) resetButton.disabled = !isYou;
+        if (nextButton) nextButton.disabled = !isYou;
+      } else {
+        if (controllerElement) {
+          // Added check
+          controllerElement.textContent = "No active controller";
+        }
+        if (startButton) startButton.disabled = true;
+        if (pauseButton) pauseButton.disabled = true;
+        if (resetButton) resetButton.disabled = true;
+        if (nextButton) nextButton.disabled = true;
       }
     }
+  };
 
-    // Update lap time display with client name
-    if (lapTime > 0 && lastLapClient) {
-      lapTimeDisplayElement.textContent = ""; //`Lap (${lastLapClient}): ${(lapTime / 1000).toFixed(1)}`;
+  const sendCommand = (cmd) => {
+    // Check if buttons exist before checking disabled property
+    if ((startButton && !startButton.disabled) || cmd === "next") {
+      socket.send(JSON.stringify({ type: "command", command: cmd }));
     } else {
-      lapTimeDisplayElement.textContent = "";
+      console.log("Not the active controller.");
     }
+  };
 
-    // Update lap history display
-    let historyHTML = "<ul>";
-    if (lapHistory && lapHistory.length > 0) {
-      lapHistory.forEach((lap) => {
-        historyHTML += `<li>${lap.client}: ${(lap.timeMs / 1000).toFixed(1)} s</li>`;
-      });
-    } else {
-      historyHTML += "<li>No standups yet</li>";
-    }
-    historyHTML += "</ul>";
-    lapHistoryElement.innerHTML = historyHTML;
+  // Add event listeners only after buttons are confirmed to exist
+  if (startButton) startButton.onclick = () => sendCommand("start");
+  if (pauseButton) pauseButton.onclick = () => sendCommand("pause");
+  if (resetButton) resetButton.onclick = () => sendCommand("reset");
+  if (nextButton) nextButton.onclick = () => sendCommand("next");
 
-    // Update controller display and button states
-    if (activeClient) {
-      controllerElement.textContent = `Controller: ${activeClient}`;
-      const isYou = yourId === activeClient;
-      startButton.disabled = !isYou;
-      pauseButton.disabled = !isYou;
-      resetButton.disabled = !isYou;
-      nextButton.disabled = !isYou;
-    } else {
-      controllerElement.textContent = "No active controller";
-      startButton.disabled = true;
-      pauseButton.disabled = true;
-      resetButton.disabled = true;
-      nextButton.disabled = true;
-    }
+  // Disable buttons initially and set initial timer color
+  if (startButton) startButton.disabled = true;
+  if (pauseButton) pauseButton.disabled = true;
+  if (resetButton) resetButton.disabled = true;
+  if (nextButton) nextButton.disabled = true;
+  // Set initial timer color to green
+  if (timerElement) {
+    // Added check
+    timerElement.classList.add("timer-green");
   }
-};
-
-const sendCommand = (cmd) => {
-  if (!startButton.disabled || cmd === "next") {
-    socket.send(JSON.stringify({ type: "command", command: cmd }));
-  } else {
-    console.log("Not the active controller.");
-  }
-};
-
-startButton.onclick = () => sendCommand("start");
-pauseButton.onclick = () => sendCommand("pause");
-resetButton.onclick = () => sendCommand("reset");
-nextButton.onclick = () => sendCommand("next");
-
-// Disable buttons initially and set initial timer color
-startButton.disabled = true;
-pauseButton.disabled = true;
-resetButton.disabled = true;
-nextButton.disabled = true;
-// Set initial timer color to green
-timerElement.classList.add("timer-green");
+}); // End of DOMContentLoaded listener

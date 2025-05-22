@@ -17,13 +17,17 @@
         />
     </head>
     <body>
+        <div class="client-list-container" id="clientListContainer">
+            <h3>Connected Clients:</h3>
+            <ul id="clientList"></ul>
+        </div>
         <div class="client-name" id="clientNameDisplay"></div>
         <div class="controller" id="controller">Waiting for controller...</div>
         <div class="timer-container">
             <div class="value" id="timer">0.0</div>
             <div id="asciiLoadingBar"></div>
         </div>
-        <div class="lap-time" id="lapTimeDisplay"></div>
+        <!-- Removed lap-time div -->
         <div class="buttons">
             <button id="start">Start</button>
             <button id="pause">Pause</button>
