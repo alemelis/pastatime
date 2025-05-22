@@ -10,7 +10,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/goombaio/namegenerator"
 	"github.com/gorilla/websocket"
 )
@@ -132,7 +131,7 @@ func handleNewSession(w http.ResponseWriter, r *http.Request) {
 	defer sessionsMux.Unlock()
 
 	// Generate a unique session ID
-	sessionID := uuid.New().String()
+	sessionID := generateName()
 
 	// Create a new session state
 	session := &Session{

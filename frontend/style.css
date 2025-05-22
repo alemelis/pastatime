@@ -36,7 +36,7 @@ button {
     color: #ffffff; /* White text for contrast */
     padding: 15px 30px;
     font-size: 1.5em;
-    font-family: "Fascinate Inline", system-ui;
+    font-family: "Fascinate", system-ui;
     text-transform: uppercase;
     cursor: pointer;
     transition: 0.3s ease;

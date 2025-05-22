@@ -130,7 +130,7 @@ button:disabled {
 
 /* Adjusted styles for list within the lap history pill */
 .lap-history ul {
-    list-style-type: "🍝 "; /* Keep pasta emoji */
+    list-style-type: "⏰ "; /* Keep pasta emoji */
     padding-left: 20px; /* Adjusted padding for list inside the pill */
     text-align: left; /* Align list items to the left */
 }
