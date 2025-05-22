@@ -2,15 +2,29 @@ const timerElement = document.getElementById("timer");
 const lapTimeDisplayElement = document.getElementById("lapTimeDisplay");
 const lapHistoryElement = document.getElementById("lapHistory");
 const controllerElement = document.getElementById("controller");
-const clientNameDisplayElement = document.getElementById("clientNameDisplay"); // Addded client name
+const clientNameDisplayElement = document.getElementById("clientNameDisplay"); // Added client name
 const startButton = document.getElementById("start");
 const pauseButton = document.getElementById("pause");
 const resetButton = document.getElementById("reset");
 const nextButton = document.getElementById("next");
+const asciiLoadingBarElement = document.getElementById("asciiLoadingBar"); // Get the ASCII loading bar element
 const socket = new WebSocket("ws://localhost:8080/ws");
 
 let currentTime = 0;
 let yourId = null;
+const oneMinuteInMs = 60000; // 1 minute in milliseconds
+const totalLoadingTime = oneMinuteInMs; // The time it takes for the loading bar to fill
+const barLength = 40; // Reduced bar length slightly for better fit in the pill
+
+// Function to generate Unicode loading bar
+const generateUnicodeBar = (percentage) => {
+  const filledLength = Math.round((percentage / 100) * barLength);
+  const emptyLength = barLength - filledLength;
+  // Using Unicode block elements for a nicer look
+  const filledBar = "█".repeat(filledLength);
+  const emptyBar = "░".repeat(emptyLength); // Using light shade character for empty part
+  return `${filledBar}${emptyBar} ${percentage.toFixed(1)}%`;
+};
 
 socket.onmessage = (event) => {
   let msg = {};
@@ -32,7 +46,13 @@ socket.onmessage = (event) => {
     // Update client name display
     clientNameDisplayElement.textContent = `You are: ${yourId}`;
 
-    // Update timer display with animation
+    // Calculate loading percentage
+    const loadingPercentage = Math.min(newTime / totalLoadingTime, 1) * 100;
+
+    // Update Unicode loading bar
+    asciiLoadingBarElement.textContent = generateUnicodeBar(loadingPercentage);
+
+    // Update timer text and color
     if (typeof anime !== "undefined") {
       anime({
         targets: { val: currentTime },
@@ -42,11 +62,28 @@ socket.onmessage = (event) => {
         update: (anim) => {
           currentTime = anim.animations[0].currentValue;
           timerElement.textContent = (currentTime / 1000).toFixed(1);
+
+          // Change timer color based on time
+          if (currentTime >= oneMinuteInMs) {
+            timerElement.classList.remove("timer-green");
+            timerElement.classList.add("timer-red");
+          } else {
+            timerElement.classList.remove("timer-red");
+            timerElement.classList.add("timer-green");
+          }
         },
       });
     } else {
+      // Fallback if animejs is not loaded
       currentTime = newTime;
       timerElement.textContent = (currentTime / 1000).toFixed(1);
+
+      // Change timer color based on time (fallback)
+      if (currentTime >= oneMinuteInMs) {
+        timerElement.style.color = "#8b0000"; // Dark red
+      } else {
+        timerElement.style.color = "#006400"; // Dark green
+      }
     }
 
     // Update lap time display with client name
@@ -60,11 +97,10 @@ socket.onmessage = (event) => {
     let historyHTML = "<ul>";
     if (lapHistory && lapHistory.length > 0) {
       lapHistory.forEach((lap) => {
-        console.log("Lap object:", lap);
         historyHTML += `<li>${lap.client}: ${(lap.timeMs / 1000).toFixed(1)} s</li>`;
       });
     } else {
-      historyHTML += "<li>No laps yet</li>";
+      historyHTML += "<li>No standups yet</li>";
     }
     historyHTML += "</ul>";
     lapHistoryElement.innerHTML = historyHTML;
@@ -100,8 +136,10 @@ pauseButton.onclick = () => sendCommand("pause");
 resetButton.onclick = () => sendCommand("reset");
 nextButton.onclick = () => sendCommand("next");
 
-// Disable buttons initially
+// Disable buttons initially and set initial timer color
 startButton.disabled = true;
 pauseButton.disabled = true;
 resetButton.disabled = true;
 nextButton.disabled = true;
+// Set initial timer color to green
+timerElement.classList.add("timer-green");

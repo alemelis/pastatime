@@ -2,19 +2,27 @@
 <html lang="en">
     <head>
         <meta charset="UTF-8" />
-        <title>Cyberpunk Timer</title>
+        <title>Pastatime</title>
         <link rel="stylesheet" href="style.css" />
 
-        <!-- Cyberpunk font -->
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link
-            href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600&display=swap"
+            href="https://fonts.googleapis.com/css2?family=Fascinate+Inline&display=swap"
+            rel="stylesheet"
+        />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Fascinate&display=swap"
             rel="stylesheet"
         />
     </head>
     <body>
         <div class="client-name" id="clientNameDisplay"></div>
         <div class="controller" id="controller">Waiting for controller...</div>
-        <div class="value" id="timer">0.0</div>
+        <div class="timer-container">
+            <div class="value" id="timer">0.0</div>
+            <div id="asciiLoadingBar"></div>
+        </div>
         <div class="lap-time" id="lapTimeDisplay"></div>
         <div class="buttons">
             <button id="start">Start</button>
@@ -23,9 +31,7 @@
             <button id="next">Next</button>
         </div>
 
-        <div class="lap-history" id="lapHistory">
-            <!-- Lap history will be displayed here -->
-        </div>
+        <div class="lap-history" id="lapHistory"></div>
 
         <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
         <script src="script.js"></script>
