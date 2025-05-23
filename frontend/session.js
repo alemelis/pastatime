@@ -153,13 +153,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       }
 
-      // Removed lap time display update logic
-      // if (lapTime > 0 && lastLapClient) {
-      //   lapTimeDisplayElement.textContent = ""; //`Lap (${lastLapClient}): ${(lapTime / 1000).toFixed(1)}`;
-      // } else {
-      //   lapTimeDisplayElement.textContent = "";
-      // }
-
       // Update lap history display
       let historyHTML = "<ul>";
       if (lapHistory && lapHistory.length > 0) {
@@ -178,7 +171,6 @@ document.addEventListener("DOMContentLoaded", () => {
       // Update controller display and button states
       if (activeClient) {
         if (controllerElement) {
-          // Added check
           controllerElement.textContent = `Controller: ${activeClient}`;
         }
         const isYou = yourId === activeClient;
@@ -188,7 +180,6 @@ document.addEventListener("DOMContentLoaded", () => {
         if (nextButton) nextButton.disabled = !isYou;
       } else {
         if (controllerElement) {
-          // Added check
           controllerElement.textContent = "No active controller";
         }
         if (startButton) startButton.disabled = true;

@@ -79,7 +79,6 @@ func serveFiles(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	//Log access
-	log.Printf("Serving file: %s\n", absPath)
 	http.ServeFile(w, r, absPath)
 }
 

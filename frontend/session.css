@@ -33,7 +33,6 @@ h3,
     letter-spacing: 2px;
 }
 
-/* Styling for the "big pills" - Added .lap-history */
 .client-name,
 .controller,
 .value,
@@ -73,7 +72,6 @@ h3,
     text-shadow: 3px 3px 5px #000000; /* Darker shadow */
     position: relative; /* Keep timer positioned */
     z-index: 1; /* Ensure timer is above loading bar */
-    /* Initial color is set by .timer-green or .timer-red class */
 }
 
 /* Timer colors based on time */
@@ -91,8 +89,6 @@ h3,
     /* margin and padding inherited from the combined pill style */
     color: #4a2c2a; /* Dark brown text color */
 }
-
-/* Removed .lap-time style block */
 
 .buttons {
     display: flex;
@@ -128,7 +124,6 @@ button:disabled {
     color: #a9a9a9; /* Dark grey */
 }
 
-/* Adjusted styles for list within the lap history pill */
 .lap-history ul {
     list-style-type: "⏰ "; /* Keep pasta emoji */
     padding-left: 20px; /* Adjusted padding for list inside the pill */
