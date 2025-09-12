@@ -32,7 +32,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const sessionId = pathSegments[2]; // Assuming URL format is /s/{sessionId}
 
   // Connect to the WebSocket endpoint for this specific session
-  const socketUrl = `ws://localhost:8080/s/${sessionId}/ws`;
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const socketUrl = `${protocol}//${window.location.host}/s/${sessionId}/ws`;
   const socket = new WebSocket(socketUrl);
 
   // Check if the loading bar element was found
