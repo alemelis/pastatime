@@ -1,0 +1,10 @@
+version: '3.8'
+
+services:
+  pastatime:
+    build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./frontend:/app/frontend:ro
+    restart: unless-stopped
